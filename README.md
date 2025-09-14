@@ -9,6 +9,18 @@ A Model Context Protocol (MCP) server for accessing Rice Business Stock Market D
 - Rice University email verification for access control
 - Seamless integration with Claude Desktop
 
+## Prerequisites
+
+**You must have Node.js installed on your computer** to use this MCP server.
+
+- **Download Node.js**: Visit [nodejs.org](https://nodejs.org/) and install the LTS version
+- **Verify installation**: Open terminal/command prompt and run:
+  ```bash
+  node --version
+  npm --version
+  ```
+  Both commands should return version numbers.
+
 ## Claude Desktop Configuration
 
 ### Step 1: Get Your Access Token
@@ -29,7 +41,7 @@ A Model Context Protocol (MCP) server for accessing Rice Business Stock Market D
       "args": ["@kerryback/rice-stock-data"],
       "env": {
         "USER_ACCESS_TOKEN": "your_actual_access_token_here",
-        "APP_URL": "https://data-portal-mcp.rice-business.org"
+        "APP_URL": "https://your-actual-data-portal.rice-business.org"
       }
     }
   }
