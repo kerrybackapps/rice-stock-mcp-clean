@@ -18,6 +18,8 @@ class RiceStockDataMCPServer {
   private server: Server;
   private baseUrl: string;
   private userAccessToken: string;
+  private failureCount: number = 0;
+  private maxFailures: number = 3;
 
   constructor() {
     this.server = new Server(
@@ -120,6 +122,9 @@ class RiceStockDataMCPServer {
 
   private async queryWithNaturalLanguage(token: string, prompt: string): Promise<string> {
     try {
+      // Determine which model to use based on failure count
+      const model = this.failureCount >= this.maxFailures ? 'gpt-5' : 'gpt-4.1';
+      
       // Step 1: Get AI response and SQL query from /chat endpoint
       const chatResponse = await fetch(`${this.baseUrl}/chat`, {
         method: 'POST',
@@ -129,11 +134,17 @@ class RiceStockDataMCPServer {
         },
         body: JSON.stringify({
           message: prompt,
-          conversation_id: "mcp_session"
+          conversation_id: "mcp_session",
+          model: model
         })
       });
 
       if (!chatResponse.ok) {
+        // Increment failure count for non-auth errors
+        if (chatResponse.status !== 401) {
+          this.failureCount++;
+        }
+        
         if (chatResponse.status === 401) {
           return "Authentication failed. Please check your access token is valid and hasn't expired.";
         } else if (chatResponse.status === 429) {
@@ -148,12 +159,21 @@ class RiceStockDataMCPServer {
       const communication = chatData.communication || '';
       const sqlQuery = chatData.sql_query || '';
 
+      // Check if we switched to GPT-5 and notify user (before resetting failure count)
+      let modelNotification = '';
+      if (model === 'gpt-5' && this.failureCount >= this.maxFailures) {
+        modelNotification = '🔄 **Switched to GPT-5.0** due to previous failures with GPT-4.1.\n\n';
+      }
+
+      // Reset failure count on successful response
+      this.failureCount = 0;
+
       // Step 2: If there's no SQL query, return the communication (likely a clarifying question)
       if (!sqlQuery || sqlQuery.trim() === '') {
         if (communication.includes('?') || communication.toLowerCase().includes('clarif')) {
-          return `**Question for you:** ${communication}`;
+          return `${modelNotification}**Question for you:** ${communication}`;
         }
-        return communication;
+        return `${modelNotification}${communication}`;
       }
 
       // Step 3: Execute the SQL query to get actual data
@@ -170,23 +190,27 @@ class RiceStockDataMCPServer {
 
       if (!queryResponse.ok) {
         const errorText = await queryResponse.text();
-        return `Query execution failed: ${errorText}`;
+        return `${modelNotification}Query execution failed: ${errorText}`;
       }
 
       const queryData = await queryResponse.json() as any;
       
       // Step 4: Format and return the results
       if (queryData.data && Array.isArray(queryData.data)) {
-        let result = communication ? `${communication}\n\n` : '';
+        let result = modelNotification;
+        result += communication ? `${communication}\n\n` : '';
         result += `**Query executed:** \`${sqlQuery}\`\n\n`;
         result += `**Results:** (${queryData.rows} rows, ${queryData.execution_time?.toFixed(2)}s)\n\n`;
         result += this.formatQueryResults(queryData.data, queryData.columns);
         return result;
       } else {
-        return `${communication}\n\nQuery executed but returned no data.`;
+        return `${modelNotification}${communication}\n\nQuery executed but returned no data.`;
       }
 
     } catch (error) {
+      // Increment failure count on exceptions
+      this.failureCount++;
+      
       if (error instanceof Error && error.name === 'AbortError') {
         return "Request timed out. The query might be too complex. Try simplifying your question.";
       }
