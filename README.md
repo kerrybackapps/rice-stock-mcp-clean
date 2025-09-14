@@ -28,7 +28,7 @@ A Model Context Protocol (MCP) server for accessing Rice Business Stock Market D
       "command": "npx",
       "args": ["@kerryback/data-portal-mcp"],
       "env": {
-        "USER_ACCESS_TOKEN": "YOUR_ACCESS_TOKEN_HERE",
+        "USER_ACCESS_TOKEN": "your_actual_access_token_here",
         "APP_URL": "https://data-portal-mcp.rice-business.org"
       }
     }
@@ -36,7 +36,7 @@ A Model Context Protocol (MCP) server for accessing Rice Business Stock Market D
 }
 ```
 
-4. Replace `YOUR_ACCESS_TOKEN_HERE` with your actual access token from Step 1
+4. Replace `"your_actual_access_token_here"` with your actual access token from Step 1 (keep the quotation marks)
 5. Save the configuration file
 6. Restart Claude Desktop
 
