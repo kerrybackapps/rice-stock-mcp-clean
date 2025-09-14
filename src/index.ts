@@ -133,7 +133,7 @@ class RiceStockDataMCPServer {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          message: prompt,
+          message: `${prompt} (Please provide ALL results without LIMIT clause - I need the complete dataset)`,
           conversation_id: "mcp_session",
           model: model
         })
@@ -223,8 +223,8 @@ class RiceStockDataMCPServer {
       return "No results found.";
     }
 
-    // For small datasets (≤10 rows), show as a table
-    if (data.length <= 10) {
+    // For very small datasets (≤5 rows), show complete table
+    if (data.length <= 5) {
       let result = "```\n";
       
       // Header row
@@ -246,16 +246,40 @@ class RiceStockDataMCPServer {
       return result;
     }
 
-    // For larger datasets, show first few rows + summary
-    let result = `Showing first 5 of ${data.length} results:\n\n`;
-    result += "```\n";
+    // For medium datasets (6-20 rows), show all with warning
+    if (data.length <= 20) {
+      let result = `Complete dataset (${data.length} rows):\n\n`;
+      result += "```\n";
+      
+      // Header row
+      result += columns.join(" | ") + "\n";
+      result += columns.map(() => "---").join(" | ") + "\n";
+      
+      // All rows
+      for (const row of data) {
+        const rowValues = columns.map(col => {
+          const value = row[col];
+          if (value === null || value === undefined) return "null";
+          if (typeof value === "number") return value.toLocaleString();
+          return String(value);
+        });
+        result += rowValues.join(" | ") + "\n";
+      }
+      
+      result += "```";
+      return result;
+    }
+
+    // For large datasets (>20 rows), show first/last few + summary
+    let result = `**Large Dataset Retrieved** (${data.length} total rows)\n\n`;
+    result += "**First 3 rows:**\n```\n";
     
     // Header row
     result += columns.join(" | ") + "\n";
     result += columns.map(() => "---").join(" | ") + "\n";
     
-    // First 5 rows
-    for (let i = 0; i < Math.min(5, data.length); i++) {
+    // First 3 rows
+    for (let i = 0; i < 3; i++) {
       const row = data[i];
       const rowValues = columns.map(col => {
         const value = row[col];
@@ -266,11 +290,29 @@ class RiceStockDataMCPServer {
       result += rowValues.join(" | ") + "\n";
     }
     
-    result += "```\n";
+    result += "```\n\n";
     
-    if (data.length > 5) {
-      result += `\n*... and ${data.length - 5} more rows*`;
+    // Last 2 rows
+    if (data.length > 3) {
+      result += "**Last 2 rows:**\n```\n";
+      result += columns.join(" | ") + "\n";
+      result += columns.map(() => "---").join(" | ") + "\n";
+      
+      for (let i = Math.max(3, data.length - 2); i < data.length; i++) {
+        const row = data[i];
+        const rowValues = columns.map(col => {
+          const value = row[col];
+          if (value === null || value === undefined) return "null";
+          if (typeof value === "number") return value.toLocaleString();
+          return String(value);
+        });
+        result += rowValues.join(" | ") + "\n";
+      }
+      
+      result += "```\n\n";
     }
+    
+    result += `📊 **Full dataset contains ${data.length} rows** - All data has been retrieved from the portal.`;
     
     return result;
   }
