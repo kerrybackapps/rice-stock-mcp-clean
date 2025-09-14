@@ -26,7 +26,7 @@ A Model Context Protocol (MCP) server for accessing Rice Business Stock Market D
   "mcpServers": {
     "rice-stock-data": {
       "command": "npx",
-      "args": ["@kerryback/rice-stock-data-mcp"],
+      "args": ["@kerryback/data-portal-mcp"],
       "env": {
         "USER_ACCESS_TOKEN": "YOUR_ACCESS_TOKEN_HERE",
         "APP_URL": "https://data-portal-mcp.rice-business.org"
@@ -92,7 +92,7 @@ The web server provides these endpoints (for deployment):
 ### Claude Desktop doesn't show the MCP server
 - Make sure you've restarted Claude Desktop after configuration
 - Check that the configuration JSON is valid (no syntax errors)
-- Verify the package name is correct: `@kerryback/rice-stock-data-mcp`
+- Verify the package name is correct: `@kerryback/data-portal-mcp`
 
 ## Support
 
