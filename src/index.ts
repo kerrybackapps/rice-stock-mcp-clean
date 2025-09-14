@@ -120,7 +120,8 @@ class RiceStockDataMCPServer {
 
   private async queryWithNaturalLanguage(token: string, prompt: string): Promise<string> {
     try {
-      const response = await fetch(`${this.baseUrl}/chat`, {
+      // Step 1: Get AI response and SQL query from /chat endpoint
+      const chatResponse = await fetch(`${this.baseUrl}/chat`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -128,33 +129,63 @@ class RiceStockDataMCPServer {
         },
         body: JSON.stringify({
           message: prompt,
-          conversation_id: "mcp_session" // Use consistent ID for context
+          conversation_id: "mcp_session"
         })
       });
 
-      if (response.ok) {
-        const data = await response.json() as any;
-        
-        // Extract the response message
-        if (data.message) {
-          return data.message;
-        } else if (data.response) {
-          return data.response;
+      if (!chatResponse.ok) {
+        if (chatResponse.status === 401) {
+          return "Authentication failed. Please check your access token is valid and hasn't expired.";
+        } else if (chatResponse.status === 429) {
+          return "Rate limit exceeded. Please wait a moment before trying again.";
         } else {
-          // If data is returned, format it nicely
-          if (data.data) {
-            return this.formatDataResponse(data.data, prompt);
-          }
-          return JSON.stringify(data, null, 2);
+          const errorText = await chatResponse.text();
+          return `API error (status ${chatResponse.status}): ${errorText}`;
         }
-      } else if (response.status === 401) {
-        return "Authentication failed. Please check your access token is valid and hasn't expired.";
-      } else if (response.status === 429) {
-        return "Rate limit exceeded. Please wait a moment before trying again.";
-      } else {
-        const errorText = await response.text();
-        return `API error (status ${response.status}): ${errorText}`;
       }
+
+      const chatData = await chatResponse.json() as any;
+      const communication = chatData.communication || '';
+      const sqlQuery = chatData.sql_query || '';
+
+      // Step 2: If there's no SQL query, return the communication (likely a clarifying question)
+      if (!sqlQuery || sqlQuery.trim() === '') {
+        if (communication.includes('?') || communication.toLowerCase().includes('clarif')) {
+          return `**Question for you:** ${communication}`;
+        }
+        return communication;
+      }
+
+      // Step 3: Execute the SQL query to get actual data
+      const queryResponse = await fetch(`${this.baseUrl}/api/query`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          query: sqlQuery
+        })
+      });
+
+      if (!queryResponse.ok) {
+        const errorText = await queryResponse.text();
+        return `Query execution failed: ${errorText}`;
+      }
+
+      const queryData = await queryResponse.json() as any;
+      
+      // Step 4: Format and return the results
+      if (queryData.data && Array.isArray(queryData.data)) {
+        let result = communication ? `${communication}\n\n` : '';
+        result += `**Query executed:** \`${sqlQuery}\`\n\n`;
+        result += `**Results:** (${queryData.rows} rows, ${queryData.execution_time?.toFixed(2)}s)\n\n`;
+        result += this.formatQueryResults(queryData.data, queryData.columns);
+        return result;
+      } else {
+        return `${communication}\n\nQuery executed but returned no data.`;
+      }
+
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
         return "Request timed out. The query might be too complex. Try simplifying your question.";
@@ -163,38 +194,73 @@ class RiceStockDataMCPServer {
     }
   }
 
+  private formatQueryResults(data: any[], columns: string[]): string {
+    if (!data || data.length === 0) {
+      return "No results found.";
+    }
+
+    // For small datasets (≤10 rows), show as a table
+    if (data.length <= 10) {
+      let result = "```\n";
+      
+      // Header row
+      result += columns.join(" | ") + "\n";
+      result += columns.map(() => "---").join(" | ") + "\n";
+      
+      // Data rows
+      for (const row of data) {
+        const rowValues = columns.map(col => {
+          const value = row[col];
+          if (value === null || value === undefined) return "null";
+          if (typeof value === "number") return value.toLocaleString();
+          return String(value);
+        });
+        result += rowValues.join(" | ") + "\n";
+      }
+      
+      result += "```";
+      return result;
+    }
+
+    // For larger datasets, show first few rows + summary
+    let result = `Showing first 5 of ${data.length} results:\n\n`;
+    result += "```\n";
+    
+    // Header row
+    result += columns.join(" | ") + "\n";
+    result += columns.map(() => "---").join(" | ") + "\n";
+    
+    // First 5 rows
+    for (let i = 0; i < Math.min(5, data.length); i++) {
+      const row = data[i];
+      const rowValues = columns.map(col => {
+        const value = row[col];
+        if (value === null || value === undefined) return "null";
+        if (typeof value === "number") return value.toLocaleString();
+        return String(value);
+      });
+      result += rowValues.join(" | ") + "\n";
+    }
+    
+    result += "```\n";
+    
+    if (data.length > 5) {
+      result += `\n*... and ${data.length - 5} more rows*`;
+    }
+    
+    return result;
+  }
+
   private formatDataResponse(data: any, prompt: string): string {
+    // Legacy method - keeping for compatibility
     if (Array.isArray(data) && data.length > 0) {
-      // Check if it's tabular data
       if (typeof data[0] === 'object' && data[0] !== null) {
-        // Create a simple table format
-        let result = `Query: ${prompt}\n\n`;
-        result += `Found ${data.length} results:\n\n`;
-        
-        // Get column headers
-        const headers = Object.keys(data[0]);
-        
-        // Format as simple text table
-        for (let i = 0; i < Math.min(data.length, 50); i++) {
-          const row = data[i];
-          result += `\n--- Result ${i + 1} ---\n`;
-          for (const header of headers) {
-            const value = row[header] ?? "N/A";
-            result += `${header}: ${value}\n`;
-          }
-        }
-        
-        if (data.length > 50) {
-          result += `\n... and ${data.length - 50} more results`;
-        }
-        
-        return result;
-      } else {
-        return `Query: ${prompt}\n\nResults:\n${JSON.stringify(data, null, 2)}`;
+        const columns = Object.keys(data[0]);
+        return this.formatQueryResults(data, columns);
       }
     }
     
-    return `Query: ${prompt}\n\nResponse:\n${JSON.stringify(data, null, 2)}`;
+    return `Response:\n${JSON.stringify(data, null, 2)}`;
   }
 
   async run() {
