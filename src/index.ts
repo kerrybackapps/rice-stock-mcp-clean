@@ -245,16 +245,19 @@ class RiceStockDataMCPServer {
   }
 
   private async saveDataAsCSV(data: any[], columns: string[]): Promise<string> {
-    // Create a temporary directory for CSV files if it doesn't exist
-    const tmpDir = path.join(os.tmpdir(), 'rice-stock-data');
-    if (!fs.existsSync(tmpDir)) {
-      fs.mkdirSync(tmpDir, { recursive: true });
+    // Save to user's home directory in a dedicated rice-stock-data folder
+    // This makes files persistent and accessible to Claude Desktop
+    const homeDir = os.homedir();
+    const dataDir = path.join(homeDir, 'rice-stock-data');
+
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
     }
 
     // Generate filename with timestamp
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
     const filename = `stock-data-${timestamp}.csv`;
-    const filePath = path.join(tmpDir, filename);
+    const filePath = path.join(dataDir, filename);
 
     // Convert data to CSV format
     let csvContent = columns.join(',') + '\n';
