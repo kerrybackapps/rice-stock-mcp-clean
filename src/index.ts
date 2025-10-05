@@ -38,7 +38,7 @@ class RiceStockDataMCPServer {
     );
 
     // Use the same base URL pattern as your Koyeb deployment
-    this.baseUrl = process.env.KOYEB_APP_URL || process.env.APP_URL || "https://your-app.koyeb.app";
+    this.baseUrl = process.env.KOYEB_APP_URL || process.env.APP_URL || "https://data-portal.rice-business.org";
     
     // Each user stores their personal Rice Portal access token in Claude Desktop config
     this.userAccessToken = process.env.USER_ACCESS_TOKEN || "";
