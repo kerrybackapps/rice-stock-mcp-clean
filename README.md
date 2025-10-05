@@ -1,5 +1,9 @@
 # Rice Stock Data MCP Server
 
+<div align="center">
+  <img src="rice-business-transparent-final.png" alt="Rice Business" style="max-height: 150px; width: auto;">
+</div>
+
 A Model Context Protocol (MCP) server for accessing Rice Business Stock Market Data Portal through Claude Desktop.
 
 ## Features

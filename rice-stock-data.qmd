@@ -1,0 +1,90 @@
+---
+title: "Rice Stock Data MCP Server"
+subtitle: "Setup Guide for Claude Desktop Integration"
+author: Kerry Back
+date: "September 14, 2025"
+format:
+  pdf:
+    colorlinks: true
+    geometry: margin=1.25in
+    fontsize: 12pt
+    documentclass: article
+---
+
+```{=latex}
+\begin{center}
+\includegraphics[height=120pt]{rice-business-transparent-final.png}
+\end{center}
+```
+
+```{=html}
+<div style="text-align: center;">
+  <img src="rice-business-transparent-final.png" style="height: 100px;" />
+</div>
+```
+
+
+
+```{=html}
+<div style="text-align: center;">
+September 14, 2025
+</div>
+```
+
+This is a Model Context Protocol (MCP) server for accessing the Rice Business Stock Market Data Portal through Claude Desktop. Its features include:
+
+- Natural language queries for stock market data
+- Access to comprehensive financial metrics and indicators
+- Rice University email verification for access control
+- Seamless integration with Claude Desktop
+
+
+## Step 1: Download the .mcpb file
+
+Download [rice-stock-data.mcpb](https://data-portal.rice-business.org/rice-stock-data.mcpb)
+
+## Step 2: Get Your Access Token
+
+1. Visit the [Rice Business Stock Market Data Portal](https://data-portal.rice-business.org) to request an access token (if you do not already have one)
+2. Verify your Rice University email address
+3. Copy your personal access token
+
+
+## Step 3: Install the MCP Server
+
+### Option A: Start with the .mcpb file
+
+1. Find the location of claude.exe in your file system.  On Windows, it is probably at `C:\Users\user_name\AppData\Local\AnthropicClaude\claude.exe`.  If it is not there, you can open the Start menu,  Search for Claude, right-click the Claude icon, Choose **Open File Location**, which should take you to the location of a shortcut, right-click the shortcut, and select **Properties**. 
+2. Right-click rice-stock-data.mcpb, select **Open With**, and browse to find and select claude.exe. Claude will open. 
+3. Follow the instructions.  You will be prompted to enter your access token.  Once you've done so, it is **important to use the toggle switch to enable the token**.  See the image below.  When you first enter your token, it will say `Disabled.`  Slide the switch to get `Enabled` as shown in the image below.  Then close the access token window.
+
+![](images/EnableMCP.png)
+
+You should now be able to use the data portal in Claude Code.
+
+
+### Option B: Start with Claude Desktop
+
+1. Open Claude Desktop
+2. Select your username/plan.  Then **Settings** → **Extensions** → **Advanced Settings**.  Scroll to the bottom of that page and select **Install Extension**.  Browse to rice-stock-data.mpcb and select it.  Select **Install** in each window that opens (you can ignore the warnings).
+3.  Same as #3 in Option A.
+
+## Step 4: Using the MCP Server
+
+Once configured, you can ask Claude questions about stock market data.  For example, "Using the Rice stock data portal, ..."
+
+- "Get the history of Apple's adjusted closing price beginning in 2020."
+- "Get all insider trades for Tesla for the past two years.""
+- "Find the current median PE ratio of mid-cap oil and gas stocks.""
+- "Get the history of DuPont ratios for all biotech stocks for the past five years."
+- "Get Tesla's ROE for each of the past 12 quarters on a trailing 4-quarters basis."
+
+
+## Table Descriptions
+
+Detailed descriptions of the database tables and the variables in each table can be found [here](https://portal-guide.rice-business.org). Here are some general issues to be aware of:
+
+- To filter on a categorical variable, the exact values of the categorical variable must be determined. It can help to ask Claude: "list the possible values of variable x in table y".
+- The SEP table contains three types of prices. The `open`, `high`, `low`, `close` and `volume` variables are split adjusted. The `closeunadj` variable is not split adjusted. The `closeadj` variable is both split and dividend adjusted (like yfinance), so total returns including dividends can be computed (to a sufficient degree of precision) as percent changes in `closeadj`.
+- Financial statement data is available in the SF1 table either as reported or including restatements. Data from both 10Ks and 10Qs is available. As reported 10K data is selected by filtering on `dimension='ARY'`. As reported 10Q data is selected by filtering on `dimension='ARQ'`. The most recent data including restatements is selected by filtering on `dimension='MRY'` or `dimension='MRQ'`. Data is also available quarter by quarter on a trailing four quarters basis as `dimension='ART'` or `dimension='MRT'`.
+- The `reportperiod` variable in the SF1 table is the end of the fiscal period. The `datekey` variable is the date at which the statement was filed (for `ARx` data). There are also `fiscalperiod` and `calendardate` variables.

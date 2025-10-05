@@ -1,6 +1,6 @@
 {
   "name": "@kerryback/rice-stock-data",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "description": "MCP server for Rice Business Stock Market Data Portal - Access financial data through Claude Desktop",
   "main": "dist/index.js",
   "type": "module",

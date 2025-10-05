@@ -220,13 +220,13 @@ class RiceStockDataMCPServer {
         result += `**Results:** Retrieved ${queryData.rows} rows in ${queryData.execution_time?.toFixed(2)}s\n\n`;
 
         result += `📊 **Data Retrieved Successfully**\n\n`;
-        result += `**Data saved to:** \`${csvFilePath}\`\n\n`;
+        result += `✅ **CSV file saved to:** \`${csvFilePath}\`\n\n`;
         result += `**Ask the user:** How would you like me to handle this data?\n\n`;
-        result += `1. **Show on screen** - Display the data in a formatted table\n`;
-        result += `2. **Provide download link** - The file is already saved at the path above\n`;
-        result += `3. **Work with data** - Analyze, visualize, or process the data programmatically\n\n`;
-        result += `**Note:** The data is available in the CSV file at the path shown above. ` +
-                  `You can read it directly using the Read tool or work with it programmatically.`;
+        result += `1. **Show on screen** - Display the data in a formatted table (read the CSV and format it)\n`;
+        result += `2. **Download link** - The file is already saved at: \`${csvFilePath}\`\n`;
+        result += `3. **Work with data** - Analyze, visualize, or process the CSV file programmatically\n\n`;
+        result += `**IMPORTANT:** The complete dataset is in the CSV file at \`${csvFilePath}\`. ` +
+                  `Use the Read tool to access this file. DO NOT download the data again.`;
 
         return result;
       } else {
@@ -245,10 +245,10 @@ class RiceStockDataMCPServer {
   }
 
   private async saveDataAsCSV(data: any[], columns: string[]): Promise<string> {
-    // Save to user's home directory in a dedicated rice-stock-data folder
-    // This makes files persistent and accessible to Claude Desktop
-    const homeDir = os.homedir();
-    const dataDir = path.join(homeDir, 'rice-stock-data');
+    // Save to current working directory so Claude can easily find it
+    // This ensures Claude has immediate access to the data
+    const cwd = process.cwd();
+    const dataDir = path.join(cwd, 'rice-stock-data');
 
     if (!fs.existsSync(dataDir)) {
       fs.mkdirSync(dataDir, { recursive: true });
