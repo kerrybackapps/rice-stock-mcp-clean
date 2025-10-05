@@ -8,6 +8,9 @@ import {
   TextContent,
 } from "@modelcontextprotocol/sdk/types.js";
 import fetch from 'node-fetch';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as os from 'os';
 
 interface ToolArguments {
   prompt: string;
@@ -206,24 +209,24 @@ class RiceStockDataMCPServer {
 
       const queryData = await queryResponse.json() as any;
 
-      // Step 4: Return the results with user choice prompt
+      // Step 4: Save data to CSV and return file path with user choice prompt
       if (queryData.data && Array.isArray(queryData.data)) {
+        // Save data to temporary CSV file
+        const csvFilePath = await this.saveDataAsCSV(queryData.data, queryData.columns);
+
         let result = modelNotification;
         result += communication ? `${communication}\n\n` : '';
         result += `**Query executed:** \`${sqlQuery}\`\n\n`;
         result += `**Results:** Retrieved ${queryData.rows} rows in ${queryData.execution_time?.toFixed(2)}s\n\n`;
 
-        // Embed the data as JSON for Claude to work with
         result += `📊 **Data Retrieved Successfully**\n\n`;
+        result += `**Data saved to:** \`${csvFilePath}\`\n\n`;
         result += `**Ask the user:** How would you like me to handle this data?\n\n`;
         result += `1. **Show on screen** - Display the data in a formatted table\n`;
-        result += `2. **Provide download link** - Create a CSV file for download\n`;
+        result += `2. **Provide download link** - The file is already saved at the path above\n`;
         result += `3. **Work with data** - Analyze, visualize, or process the data programmatically\n\n`;
-
-        // Include the actual data in JSON format for Claude to work with
-        result += `<data rows="${queryData.rows}" columns='${JSON.stringify(queryData.columns)}'>\n`;
-        result += JSON.stringify(queryData.data, null, 2);
-        result += `\n</data>`;
+        result += `**Note:** The data is available in the CSV file at the path shown above. ` +
+                  `You can read it directly using the Read tool or work with it programmatically.`;
 
         return result;
       } else {
@@ -239,6 +242,42 @@ class RiceStockDataMCPServer {
       }
       return `Error connecting to the data portal: ${error instanceof Error ? error.message : String(error)}`;
     }
+  }
+
+  private async saveDataAsCSV(data: any[], columns: string[]): Promise<string> {
+    // Create a temporary directory for CSV files if it doesn't exist
+    const tmpDir = path.join(os.tmpdir(), 'rice-stock-data');
+    if (!fs.existsSync(tmpDir)) {
+      fs.mkdirSync(tmpDir, { recursive: true });
+    }
+
+    // Generate filename with timestamp
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+    const filename = `stock-data-${timestamp}.csv`;
+    const filePath = path.join(tmpDir, filename);
+
+    // Convert data to CSV format
+    let csvContent = columns.join(',') + '\n';
+
+    for (const row of data) {
+      const rowValues = columns.map(col => {
+        const value = row[col];
+        if (value === null || value === undefined) return '';
+
+        // Escape values that contain commas, quotes, or newlines
+        const stringValue = String(value);
+        if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
+          return `"${stringValue.replace(/"/g, '""')}"`;
+        }
+        return stringValue;
+      });
+      csvContent += rowValues.join(',') + '\n';
+    }
+
+    // Write to file
+    fs.writeFileSync(filePath, csvContent, 'utf-8');
+
+    return filePath;
   }
 
   private formatQueryResults(data: any[], columns: string[]): string {
