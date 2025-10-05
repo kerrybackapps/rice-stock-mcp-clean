@@ -1,0 +1,33 @@
+{
+  "manifest_version": "0.1",
+  "name": "@kerryback/rice-stock-data",
+  "version": "1.0.8",
+  "description": "MCP server for Rice Business Stock Market Data Portal - Access financial data through Claude Desktop",
+  "author": {
+    "name": "Kerry Back"
+  },
+  "server": {
+    "type": "node",
+    "entry_point": "package.json",
+    "mcp_config": {
+      "command": "npx",
+      "args": [
+        "@kerryback/rice-stock-data@1.0.8"
+      ],
+      "env": {
+        "APP_URL": "https://data-portal.rice-business.org",
+        "USER_ACCESS_TOKEN": "${user_config.USER_ACCESS_TOKEN}"
+      }
+    }
+  },
+  "user_config": {
+    "USER_ACCESS_TOKEN": {
+      "type": "string",
+      "title": "Your Rice Business Stock Market Data Portal access token",
+      "description": "Visit the Rice Stock Data Portal at https://data-portal.rice-business.org and confirm your Rice email address to get a token",
+      "sensitive": true,
+      "required": true
+    }
+  },
+  "license": "MIT"
+}
