@@ -1,12 +1,12 @@
 {
   "name": "@kerryback/rice-stock-data",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "MCP server for Rice Business Stock Market Data Portal",
   "main": "index.js",
   "bin": {
     "rice-stock-data": "./index.js"
   },
   "dependencies": {
-    "@kerryback/rice-stock-data": "1.0.8"
+    "@kerryback/rice-stock-data": "1.0.9"
   }
 }
