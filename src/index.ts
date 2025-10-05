@@ -40,13 +40,6 @@ class RiceStockDataMCPServer {
     // Each user stores their personal Rice Portal access token in Claude Desktop config
     this.userAccessToken = process.env.USER_ACCESS_TOKEN || "";
     
-    if (!this.userAccessToken) {
-      console.error("ERROR: USER_ACCESS_TOKEN environment variable is required");
-      console.error("Each user must store their personal Rice Data Portal access token in Claude Desktop configuration");
-      console.error("Get your token by confirming your university email at the Rice Data Portal");
-      process.exit(1);
-    }
-    
     console.error(`Rice Stock Data MCP Server starting - connecting to: ${this.baseUrl}`);
     
     this.setupHandlers();
@@ -71,6 +64,24 @@ class RiceStockDataMCPServer {
         }
 
         const prompt = (args as ToolArguments).prompt;
+
+        if (!this.userAccessToken) {
+          return {
+            content: [{
+              type: "text",
+              text: "❌ **Configuration Required**: USER_ACCESS_TOKEN environment variable is missing.\n\n" +
+                    "**To configure:**\n" +
+                    "1. Get your access token by confirming your university email at the Rice Data Portal\n" +
+                    "2. Add it to your Claude Desktop config:\n" +
+                    "   ```json\n" +
+                    "   \"env\": {\n" +
+                    "     \"USER_ACCESS_TOKEN\": \"your_token_here\"\n" +
+                    "   }\n" +
+                    "   ```\n" +
+                    "3. Restart Claude Desktop completely (right-click system tray → quit)"
+            } as TextContent]
+          };
+        }
 
         if (!prompt) {
           return {
@@ -194,14 +205,26 @@ class RiceStockDataMCPServer {
       }
 
       const queryData = await queryResponse.json() as any;
-      
-      // Step 4: Format and return the results
+
+      // Step 4: Return the results with user choice prompt
       if (queryData.data && Array.isArray(queryData.data)) {
         let result = modelNotification;
         result += communication ? `${communication}\n\n` : '';
         result += `**Query executed:** \`${sqlQuery}\`\n\n`;
-        result += `**Results:** (${queryData.rows} rows, ${queryData.execution_time?.toFixed(2)}s)\n\n`;
-        result += this.formatQueryResults(queryData.data, queryData.columns);
+        result += `**Results:** Retrieved ${queryData.rows} rows in ${queryData.execution_time?.toFixed(2)}s\n\n`;
+
+        // Embed the data as JSON for Claude to work with
+        result += `📊 **Data Retrieved Successfully**\n\n`;
+        result += `**Ask the user:** How would you like me to handle this data?\n\n`;
+        result += `1. **Show on screen** - Display the data in a formatted table\n`;
+        result += `2. **Provide download link** - Create a CSV file for download\n`;
+        result += `3. **Work with data** - Analyze, visualize, or process the data programmatically\n\n`;
+
+        // Include the actual data in JSON format for Claude to work with
+        result += `<data rows="${queryData.rows}" columns='${JSON.stringify(queryData.columns)}'>\n`;
+        result += JSON.stringify(queryData.data, null, 2);
+        result += `\n</data>`;
+
         return result;
       } else {
         return `${modelNotification}${communication}\n\nQuery executed but returned no data.`;
@@ -272,7 +295,9 @@ class RiceStockDataMCPServer {
 
     // For large datasets (>20 rows), show first/last few + summary
     let result = `**Large Dataset Retrieved** (${data.length} total rows)\n\n`;
-    result += "**First 3 rows:**\n```\n";
+    result += `🚫 **Do not print this entire dataset - it will be very slow!**\n\n`;
+    result += `💾 **CSV Download:** Provide a link to download this data as a CSV file.\n\n`;
+    result += "**Sample - First 3 rows:**\n```\n";
     
     // Header row
     result += columns.join(" | ") + "\n";
@@ -312,7 +337,9 @@ class RiceStockDataMCPServer {
       result += "```\n\n";
     }
     
-    result += `📊 **Full dataset contains ${data.length} rows** - All data has been retrieved from the portal.`;
+    result += `📊 **Full dataset contains ${data.length} rows** - All data has been retrieved from the portal.\n\n` +
+              `✅ **Next steps:** Use this data for analysis, create charts, calculate statistics, or generate summaries. ` +
+              `Do not attempt to display all ${data.length} rows as it will be very slow in the chat interface.`;
     
     return result;
   }
