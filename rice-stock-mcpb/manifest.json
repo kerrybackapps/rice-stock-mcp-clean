@@ -1,7 +1,7 @@
 {
   "manifest_version": "0.1",
   "name": "@kerryback/rice-stock-data",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "description": "MCP server for Rice Business Stock Market Data Portal - Access financial data through Claude Desktop",
   "author": {
     "name": "Kerry Back"
@@ -12,7 +12,7 @@
     "mcp_config": {
       "command": "npx",
       "args": [
-        "@kerryback/rice-stock-data@1.0.9"
+        "@kerryback/rice-stock-data@1.0.10"
       ],
       "env": {
         "APP_URL": "https://data-portal.rice-business.org",
